@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import './App.css';
 
-
 const ALLOWED_EXTENSIONS = [
     'doc', 'docx', 'rtf', 'odt', 'pdf', 'ppsx', 'pptx', 'ppt', 'pps', 'odp', 'xlsx', 'xls', 'ods'
 ];
@@ -71,33 +70,38 @@ export default function App() {
         fileInputRef.current.click();
     };
 
-    const handleAnalyze = () => {
+    const handleAnalyze = async () => {
         if (!file) return;
 
         setStatus('loading');
+        setErrorMessage('');
 
-        // Имитация анализа файла
-        setTimeout(() => {
-            // Для демонстрации: если в названии есть "virus" или "malware", триггерим предупреждение
-            const isSuspicious = file.name.toLowerCase().includes('virus') || file.name.toLowerCase().includes('malware');
+        // Создаем FormData для передачи бинарных данных (файла)
+        const formData = new FormData();
+        formData.append('file', file); // Ключ должен быть строго 'file'
 
-            if (isSuspicious) {
-                setAnalysisResult({
-                    safe: false,
-                    score: 18, // рейтинг безопасности из 100
-                    verdict: 'Обнаружены аномалии структуры данных',
-                    details: 'Файл содержит скрытые макросы, нетипичные для стандартных документов, или подозрительные внешние ссылки, характерные для методов социальной инженерии.'
-                });
-            } else {
-                setAnalysisResult({
-                    safe: true,
-                    score: 98,
-                    verdict: 'Документ безопасен для открытия',
-                    details: 'Структурный и поведенческий анализ не выявил эксплойтов, скрытых скриптов или деструктивных макросов. Целостность контейнера не нарушена.'
-                });
+        try {
+            const response = await fetch('http://localhost:5000/api/check-file/', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || `Ошибка сервера (статус ${response.status})`);
             }
+
+            // Записываем полученный от бэкенда JSON
+            console.log(data);
+            setAnalysisResult(data);
             setStatus('success');
-        }, 2500);
+
+        } catch (error) {
+            console.error('Ошибка при анализе файла:', error);
+            setErrorMessage(error.message || 'Не удалось связаться с сервером проверки.');
+            setStatus('error');
+        }
     };
 
     const handleReset = () => {
@@ -105,6 +109,15 @@ export default function App() {
         setStatus('idle');
         setErrorMessage('');
         setAnalysisResult(null);
+    };
+
+    const getRiskLabel = (level) => {
+        switch (level) {
+            case 'high': return 'Высокий уровень угрозы';
+            case 'medium': return 'Средний уровень угрозы';
+            case 'low': return 'Низкий уровень риска';
+            default: return 'Неопределенный риск';
+        }
     };
 
     return (
@@ -133,7 +146,7 @@ export default function App() {
                         className="hidden-input"
                     />
 
-                    {status !== 'success' && status !== 'loading' && (
+                    {status !== 'success' && status !== 'loading' && status !== 'error' && (
                         <div
                             className={`drop-zone ${dragActive ? 'active' : ''}`}
                             onDragEnter={handleDrag}
@@ -181,23 +194,40 @@ export default function App() {
                     )}
 
                     {status === 'success' && analysisResult && (
-                        <div className={`result-zone ${analysisResult.safe ? 'safe' : 'danger'}`}>
+                        <div className={`result-zone ${analysisResult.is_safe ? 'safe' : `danger risk-${analysisResult.risk_level}`}`}>
                             <div className="result-header">
                                 <div className="result-title">
                                   <span className="status-badge">
-                                    {analysisResult.safe ? '✓ Безопасно' : '✕ Опасность'}
+                                    {analysisResult.is_safe ? '✓ Безопасно' : '✕ Опасность'}
                                   </span>
-                                    <h3>{analysisResult.verdict}</h3>
+                                    <h3>
+                                        {analysisResult.is_safe
+                                            ? 'Документ безопасен для открытия'
+                                            : getRiskLabel(analysisResult.risk_level)
+                                        }
+                                    </h3>
                                 </div>
                                 <div className="result-score">
-                                    <div className="score-value">{analysisResult.score}%</div>
-                                    <div className="score-label">Индекс безопасности</div>
+                                    <div className="score-value">{analysisResult.risk_level.toUpperCase()}</div>
+                                    <div className="score-label">Уровень риска</div>
                                 </div>
                             </div>
 
                             <div className="result-body">
-                                <p className="file-analyzed"><strong>Файл:</strong> {file.name}</p>
-                                <p className="result-details">{analysisResult.details}</p>
+                                <p className="file-analyzed"><strong>Файл:</strong> {analysisResult.filename}</p>
+
+                                {analysisResult.details && analysisResult.details.length > 0 ? (
+                                    <div className="details-block">
+                                        <strong>Обнаруженные триггеры/аномалии:</strong>
+                                        <ul className="details-list">
+                                            {analysisResult.details.map((detail, index) => (
+                                                <li key={index}>{detail}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    <p className="result-details">При парсинге структуры файла опасных объектов не обнаружено.</p>
+                                )}
                             </div>
 
                             <div className="result-footer">
@@ -209,22 +239,16 @@ export default function App() {
 
                 <section className="features-grid">
                     <div className="feature-item">
-                        <h3>Почему важно использовать сканер вирусов?</h3>
-                        <p>Сначала сканируйте, потом задавайте вопросы. Выявляйте вирусы до того, как они проникнут на ваши устройства.</p>
+                        <h3>Why is it important to use a virus scanner?</h3>
+                        <p>Scan first, ask questions later. Detect threats before they breach your devices.</p>
                     </div>
                     <div className="feature-item">
-                        <h3>Вирусы нарушают конфиденциальность</h3>
-                        <p>
-                            Сильный вирус может получить доступ к конфиденциальной информации, такой какучетные данные или пароли,
-                            зашифровать и заблокировать доступ к данным и даже атаковать другие устройства в подключенных сетях.
-                        </p>
+                        <h3>Malware breaches privacy</h3>
+                        <p>A sophisticated threat can access sensitive information such as credentials or passwords, encrypt files, and move laterally across networks.</p>
                     </div>
                     <div className="feature-item">
-                        <h3>Остановите вредоносное ПО до того, как оно нанесет вред вам</h3>
-                        <p>
-                            Как только вирус распространился, он может беспрепятственно заразить все программы и приложения.
-                            Вот почему крайне важно использовать сканер на наличие вирусов.
-                        </p>
+                        <h3>Stop threat vectors early</h3>
+                        <p>Once active, an exploit can propagate across applications. Static and structural analytics mitigate this risk proactively.</p>
                     </div>
                 </section>
             </main>
