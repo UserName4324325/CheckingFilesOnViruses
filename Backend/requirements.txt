@@ -26,3 +26,4 @@ striprtf==0.0.32
 typing_extensions==4.15.0
 tzdata==2026.2
 win_unicode_console==0.5
+psycopg2-binary==2.9.9
