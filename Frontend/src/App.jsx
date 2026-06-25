@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
 
 const ALLOWED_EXTENSIONS = [
@@ -13,7 +13,28 @@ export default function App() {
     const [errorMessage, setErrorMessage] = useState('');
     const [analysisResult, setAnalysisResult] = useState(null);
 
+    // Новое состояние для статистики файлов
+    const [statistics, setStatistics] = useState({ low: 0, medium: 0, high: 0 });
+
     const fileInputRef = useRef(null);
+
+    // Функция для получения статистики с бэкенда
+    const fetchStatistics = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/statisticsFiles/');
+            if (response.ok) {
+                const data = await response.json();
+                setStatistics(data);
+            }
+        } catch (error) {
+            console.error('Ошибка при получении статистики:', error);
+        }
+    };
+
+    // Загружаем статистику при первой загрузке страницы
+    useEffect(() => {
+        fetchStatistics();
+    }, []);
 
     const validateAndSetFile = (selectedFile) => {
         if (!selectedFile) return;
@@ -79,8 +100,6 @@ export default function App() {
         const formData = new FormData();
         formData.append('file', file);
 
-
-
         try {
             const response = await fetch('http://localhost:5000/api/check-file/', {
                 method: 'POST',
@@ -96,6 +115,9 @@ export default function App() {
             console.log(data);
             setAnalysisResult(data);
             setStatus('success');
+
+            // Обновляем статистику после успешной проверки
+            fetchStatistics();
 
         } catch (error) {
             console.error('Ошибка при анализе файла:', error);
@@ -235,6 +257,33 @@ export default function App() {
                             </div>
                         </div>
                     )}
+
+                    {/* Добавленная таблица со статистикой под окном с формой */}
+                    <div className="stats-container">
+                        <h4 className="stats-title">Статистика проверенных файлов</h4>
+                        <table className="stats-table">
+                            <thead>
+                            <tr>
+                                <th>Уровень безопасности</th>
+                                <th>Проверено файлов</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr className="stat-row-low">
+                                <td><span className="stat-indicator low-indicator"></span>Низкий риск (Low)</td>
+                                <td>{statistics.low}</td>
+                            </tr>
+                            <tr className="stat-row-medium">
+                                <td><span className="stat-indicator medium-indicator"></span>Средний риск (Medium)</td>
+                                <td>{statistics.medium}</td>
+                            </tr>
+                            <tr className="stat-row-high">
+                                <td><span className="stat-indicator high-indicator"></span>Высокий риск (High)</td>
+                                <td>{statistics.high}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <section className="features-grid">

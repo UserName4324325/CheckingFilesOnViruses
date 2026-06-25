@@ -87,7 +87,7 @@ DATABASES = {
         'NAME': 'checking_files_db',
         'USER': 'postgres',
         'PASSWORD': 'qwerty123',
-        'HOST': 'checking_files_db',
+        'HOST': 'db',
         'PORT': '5432',
     }
 }

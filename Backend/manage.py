@@ -6,7 +6,7 @@ import sys
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'file_checker.settings')
-    
+
     # Сначала загружаем Django
     try:
         from django.core.management import execute_from_command_line
@@ -16,7 +16,7 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    
+
     # Если передан аргумент runserver — применяем миграции перед запуском
     if 'runserver' in sys.argv:
         try:
@@ -27,7 +27,7 @@ def main():
         except Exception as e:
             print(f"⚠️ Ошибка при применении миграций: {e}")
             print("⚠️ Сервер всё равно будет запущен, но могут быть проблемы с БД")
-    
+
     execute_from_command_line(sys.argv)
 
 
