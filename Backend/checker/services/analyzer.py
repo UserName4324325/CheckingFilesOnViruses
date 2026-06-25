@@ -3,6 +3,8 @@ from .office_checker import check_office_file
 from .pdf_checker import check_pdf_file
 from .rtf_checker import check_rtf_file
 from .odf_checker import check_odf_file
+from checker.models import File, ScanResult
+import hashlib
 
 OFFICE_EXTENSIONS = {'.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.pps', '.ppsx'}
 ODF_EXTENSIONS = {'.odt', '.ods', '.odp'}
@@ -29,6 +31,31 @@ def analyze_file(file):
     else:
         risk_level = "high"
     
+    # ---- СОХРАНЕНИЕ В БД ----
+    try:
+        file.seek(0)
+        file_bytes = file.read()
+        file_hash = hashlib.sha256(file_bytes).hexdigest()
+
+        file_obj, created = File.objects.get_or_create(
+            hash=file_hash,
+            defaults={
+                'name': file.name,
+                'extension': ext,
+                'size': len(file_bytes)
+            }
+        )
+
+        ScanResult.objects.create(
+            file=file_obj,
+            is_safe=result["is_safe"],
+            risk_level=risk_level,
+            details=details
+        )
+    except Exception as e:
+        print(f"Ошибка сохранения в БД: {e}")
+    # ---- КОНЕЦ СОХРАНЕНИЯ ----
+
     return {
         "filename": file.name,
         "extension": ext,
