@@ -3,9 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from .services.file_type_detector import is_allowed_extension
 from .services.analyzer import analyze_file
-from .models import ScanResult, File
+from .models import CheckResult
 from django.db.models import Count
-from datetime import datetime, timedelta
 
 class CheckFileView(APIView):
     def post(self, request):
@@ -29,10 +28,10 @@ class CheckFileView(APIView):
 
 class HistoryView(APIView):
     def get(self, request):
-        results = ScanResult.objects.select_related('file').order_by('-scan_date')[:50]
+        results = CheckResult.objects.order_by('-scan_date')[:50]
         data = [{
-            'filename': r.file.name,
-            'extension': r.file.extension,
+            'filename': r.name,
+            'extension': r.extension,
             'date': r.scan_date,
             'is_safe': r.is_safe,
             'risk_level': r.risk_level,
@@ -41,25 +40,14 @@ class HistoryView(APIView):
         return Response(data)
 
 
-class StatisticsView(APIView):
+class StatisticsFilesView(APIView):
     def get(self, request):
-        total = ScanResult.objects.count()
-        safe = ScanResult.objects.filter(is_safe=True).count()
-        dangerous = ScanResult.objects.filter(is_safe=False).count()
+        stats = CheckResult.objects.values('risk_level').annotate(count=Count('id'))
         
-        by_extension = ScanResult.objects.values('file__extension').annotate(
-            count=Count('id')
-        ).order_by('-count')
+        result = {"low": 0, "medium": 0, "high": 0}
+        for entry in stats:
+            risk = entry['risk_level']
+            if risk in result:
+                result[risk] = entry['count']
         
-        week_ago = datetime.now() - timedelta(days=7)
-        by_day = ScanResult.objects.filter(scan_date__gte=week_ago).values('scan_date__date').annotate(
-            count=Count('id')
-        ).order_by('scan_date__date')
-        
-        return Response({
-            'total': total,
-            'safe': safe,
-            'dangerous': dangerous,
-            'by_extension': list(by_extension),
-            'by_day': list(by_day)
-        })
+        return Response(result)
