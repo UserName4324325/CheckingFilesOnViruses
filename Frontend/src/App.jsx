@@ -76,9 +76,10 @@ export default function App() {
         setStatus('loading');
         setErrorMessage('');
 
-        // Создаем FormData для передачи бинарных данных (файла)
         const formData = new FormData();
-        formData.append('file', file); // Ключ должен быть строго 'file'
+        formData.append('file', file);
+
+
 
         try {
             const response = await fetch('http://localhost:5000/api/check-file/', {
@@ -92,7 +93,6 @@ export default function App() {
                 throw new Error(data.error || `Ошибка сервера (статус ${response.status})`);
             }
 
-            // Записываем полученный от бэкенда JSON
             console.log(data);
             setAnalysisResult(data);
             setStatus('success');
@@ -239,16 +239,16 @@ export default function App() {
 
                 <section className="features-grid">
                     <div className="feature-item">
-                        <h3>Why is it important to use a virus scanner?</h3>
-                        <p>Scan first, ask questions later. Detect threats before they breach your devices.</p>
+                        <h3>Почему важно использовать антивирусный сканер?</h3>
+                        <p>Сначала сканируйте, а вопросы задавайте потом. Выявляйте угрозы до того, как они проникнут на ваши устройства.</p>
                     </div>
                     <div className="feature-item">
-                        <h3>Malware breaches privacy</h3>
-                        <p>A sophisticated threat can access sensitive information such as credentials or passwords, encrypt files, and move laterally across networks.</p>
+                        <h3>Вредоносное ПО нарушает конфиденциальность.</h3>
+                        <p>Сложная угроза способна получить доступ к конфиденциальной информации (например, к учетным данным или паролям), зашифровать файлы и перемещаться внутри сети.</p>
                     </div>
                     <div className="feature-item">
-                        <h3>Stop threat vectors early</h3>
-                        <p>Once active, an exploit can propagate across applications. Static and structural analytics mitigate this risk proactively.</p>
+                        <h3>Блокируйте векторы угроз на раннем этапе</h3>
+                        <p>Активировавшись, эксплойт способен распространяться между приложениями. Методы статического и структурного анализа позволяют упреждающим образом снизить этот риск.</p>
                     </div>
                 </section>
             </main>
