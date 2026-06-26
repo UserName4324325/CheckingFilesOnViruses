@@ -17,11 +17,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . /app/
 
-# Добавляем entrypoint
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 EXPOSE 5000
 
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["python", "manage.py", "runserver", "0.0.0.0:5000"]
+CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:5000"]
